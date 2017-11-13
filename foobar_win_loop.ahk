@@ -17,8 +17,9 @@ commands:
 #NoEnv
 SetBatchLines -1
 #SingleInstance, Force
-#notrayicon
 ListLines Off
+#warn
+SetWorkingDir, A_ScriptDir
 
 #include va.ahk
 
@@ -27,28 +28,32 @@ if (settingsread()) {
 		VA_SetDefaultEndpoint(standard_audio_device, A_index)
 		VA_SetDefaultEndpoint(standard_mic, A_index)
 	}
+
 	run, %foobarexe% record://
 	WinWaitActive, ahk_exe %foobarexe%
+	if winactive(,"Start foobar2000 in safe mode") {
+		;MsgBox, 48, , please solve foobar troubles first then restart me
+		exitapp
+	}
 	WinHide, ahk_exe %foobarexe%
 } else {
 	run, settings.ini
 	WinWaitActive, settings
-	;MsgBox, 0, , please type in names of your audio loopback devices (shown in sound config, PAY ATTENTION TO CAPITALIZATION) and save . .`n`nwhen you are ready, restart program to test.`n`n(usually generic analog speaker and "stereomix")
-	;MsgBox, 64, , please type in names of your audio loopback devices (shown in sound config`, PAY ATTENTION TO CAPITALIZATION) and save.`n`nwhen you are ready`, restart program to test.`n`n(usually generic analog speaker and "stereomix")`n`nMADE BY PETER HOLZ donate:`n<a href="https://www.paypal.me/peterholz1">https://www.paypal.me/peterholz1</a>
-	
-	
 	Gui, Add, Link, x42 y19 w470 h140 , please type in names of your audio loopback devices (shown in sound config`, PAY ATTENTION TO CAPITALIZATION) and save.`n`nwhen you are ready`, restart program to test.`n`n(usually generic analog speaker and "stereomix")`n`nMADE BY PETER HOLZ donate:`n<a href="https://www.paypal.me/peterholz1">https://www.paypal.me/peterholz1</a>
 	Gui, Show, w552 h171, 
+	return
 }
 GuiClose:
 ExitApp
 
+*Space::
+exitapp
 
 write_std_settings(n) {
 	
 	standard_audio_device := "Lautsprecher"
 	standard_mic := "Stereomix"
-	foobarexe := "C:\Program Files (x86)\foobar2000\foobar2000.exe"
+	foobarexe := "C:\Program Files (x86)\foobar2000\foobar20000.exe"
 
 	if (n=1 or n=0)
 		iniwrite, %standard_audio_device%, settings.ini, settings, standard_audio_device
@@ -80,16 +85,26 @@ settingsread() {
 		iniwrite, %foobarexe%, settings.ini, settings, foobarexe
 	
 	iniread, standard_audio_device, settings.ini, settings, standard_audio_device
-	if (standard_audio_device = "ERROR")
+	if (standard_audio_device = "ERROR" or checkdevice_availability()=false)
 		write_std_settings(1)
 
 	iniread, standard_mic, settings.ini, settings, standard_miciniread, standard_mic, settings.ini, settings, standard_mic
-	if (standard_mic = "ERROR") 
+	if (standard_mic = "ERROR" or checkdevice_availability()=false) 
 		write_std_settings(2)
 	
 	return ret
 
 }
+
+checkdevice_availability() {
+	
+	numofdevices := 100
+	
+	loop numofdevices
+	if (VA_GetDeviceName(VA_GetDevice("playback")) != standard_audio_device or VA_GetDeviceName(VA_GetDevice("capture")) != standard_mic)
+		msgbox err
+}
+	
 
 check_program_availability() {
 	global
@@ -103,23 +118,7 @@ check_program_availability() {
 		if (errorlevel)
 			throw, Exception("skip foobar path selection")
 	}
-	foobarexe := SubStr(foobarexe, InStr(foobarexe, "\", false, 0, 1)+1 , strlen(foobarexe))
+	;foobarexe := SubStr(foobarexe, InStr(foobarexe, "\", false, 0, 1)+1 , strlen(foobarexe))
 
 	return boo
 }
-
-
-/*
-~space::
-standard_audio_device := p_WinGetActiveTitle()
-return
-
-;setting read analog von atom autorum übernehemn
-;funktion um audiogerät silent zu ändern? am besten identifizieren am namen!
-
-
-
-;1. in liste kommen
-;2. alle einträge überprüfen
-if name_of_audiodevice()=standard_audio_device
-	
